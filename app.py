@@ -23,8 +23,8 @@ if 'random_values' not in st.session_state:
 
 def load_data():
     """Load the main dataset and insights."""
-    df = pd.read_csv('data/CC GENERAL.csv')
-    insights_df = pd.read_csv('data/insights.csv')
+    df = pd.read_csv('../../Downloads/data/CC GENERAL.csv')
+    insights_df = pd.read_csv('../../Downloads/data/insights.csv')
     return df, insights_df
 
 def process_data(df):
@@ -481,48 +481,48 @@ def upload_and_predict(cluster_method, data=None):
 def get_cluster_info():
     # Cluster descriptions, tooltips, and details
     cluster_descriptions = {
-        0: "Moderate Use, Newer Customers",
-        1: "High Balance, Credit-Focused Users",
-        2: "Cash Advance Users with Longer Tenure",
-        3: "High-Spending Active Users"
+        0: "Moderate Use, Balanced Borrowers",
+        1: "Active Spenders & Loyalists",
+        2: "Cautious Participants",
+        3: "High-Spending Active Users - Installment Savers"
     }
 
     # Extended descriptions for each cluster
     cluster_details = {
         0: """
                <ul>
-                   <li>Purchase Behavior: Less frequent purchases, both one-off and installment types are low.</li>
-                   <li>Credit Limit: Moderate credit limits.</li>
-                   <li>Cash Advances: Limited use of cash advances.</li>
-                   <li>Payment Habits: Payments are close to the minimum required, seldom pay the full balance.</li>
-                   <li>Tenure: Relatively new to the credit card service.</li>
+                   <li>Purchase Behavior: Moderate engagement in installment purchases with a moderate frequency of one-off purchases.</li>
+                   <li>Credit Limit: Higher credit limits compared to other clusters.</li>
+                   <li>Cash Advances: Moderate to high usage frequency, indicating reliance on cash advances.</li>
+                   <li>Payment Habits: Less frequent transactions but with higher payment amounts.</li>
+                   <li>Tenure: Long-standing customer relationships with a mean tenure around 11 years.</li>
                </ul>
                """,
         1: """
                <ul>
-                   <li>Purchase Behavior: Moderate engagement in both one-off and installment purchases.</li>
-                   <li>Credit Limit: High credit limits.</li>
-                   <li>Cash Advances: More frequent use of cash advances compared to Cluster 0.</li>
-                   <li>Payment Habits: High minimum payments, low percentage of full payments, indicating carrying over balances.</li>
-                   <li>Tenure: Similar to Cluster 0, relatively new to the credit card service.</li>
+                   <li>High frequency of both one-off and installment purchases, indicating active spending.</li>
+                   <li>High credit limits, similar to Cluster 0.</li>
+                   <li>Cash Advances: Infrequent usage, suggesting a lower reliance on cash advances.</li>
+                   <li>Payment Habits: Active in making payments, potentially indicating good financial management.</li>
+                   <li>Tenure: Very loyal customers with the longest average tenure, slightly above 11 years.</li>
                </ul>
                """,
         2: """
                <ul>
-                   <li>Purchase Behavior: Lower frequency of purchases, preference for one-off transactions over installments.</li>
-                   <li>Credit Limit: Moderate credit limits.</li>
-                   <li>Cash Advances: Tendency to take cash advances.</li>
-                   <li>Payment Habits: Low frequency of payments, rarely pay the full bill.</li>
-                   <li>Tenure: Longer tenure with the credit card issuer.</li>
+                   <li>Purchase Behavior: Lowest engagement in both one-off and installment purchases.</li>
+                   <li>Credit Limit: Lowest credit limits among all clusters.</li>
+                   <li>Cash Advances: Low frequency of usage, indicating cash advances are rarely used.</li>
+                   <li>Payment Habits: Minimal activity, possibly due to lower credit limits.</li>
+                   <li>Tenure: Long tenure, around 11 years, despite lower financial activity.</li>
                </ul>
                """,
         3: """
                <ul>
-                   <li>Purchase Behavior: Significant and frequent purchases, active in both one-off and installment types.</li>
-                   <li>Credit Limit: High credit limits.</li>
-                   <li>Cash Advances: Not defined by cash advance behavior.</li>
-                   <li>Payment Habits: Substantial payments toward their balances, although not always paying in full.</li>
-                   <li>Tenure: Long-term, engaged customers with the credit card service.</li>
+                   <li>Purchase Behavior: Prefer installment purchases significantly over one-off purchases.</li>
+                   <li>Credit Limit: Moderate credit limits, not as high as Clusters 0 and 1.</li>
+                   <li>Cash Advances: Very low frequency of usage, the least reliant on cash advances.</li>
+                   <li>Payment Habits: Payment frequency is not the highest but shows consistent behavior.</li>
+                   <li>Tenure: Loyalty is apparent with long tenure, averaging around 11.5 years.</li>
                </ul>
                """
     }
