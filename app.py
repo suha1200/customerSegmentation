@@ -23,8 +23,8 @@ if 'random_values' not in st.session_state:
 
 def load_data():
     """Load the main dataset and insights."""
-    df = pd.read_csv('../../Downloads/data/CC GENERAL.csv')
-    insights_df = pd.read_csv('../../Downloads/data/insights.csv')
+    df = pd.read_csv('data/CC GENERAL.csv')
+    insights_df = pd.read_csv('data/insights.csv')
     return df, insights_df
 
 def process_data(df):
