@@ -481,7 +481,7 @@ def upload_and_predict(cluster_method, data=None):
 def get_cluster_info():
     # Cluster descriptions, tooltips, and details
     cluster_descriptions = {
-        0: "Moderate Use, Balanced Borrowers",
+        0: "Moderate Users, Balanced Borrowers",
         1: "Active Spenders & Loyalists",
         2: "Cautious Participants",
         3: "High-Spending Active Users - Installment Savers"
