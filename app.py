@@ -36,6 +36,24 @@ def process_data(df):
     df = df.drop("CUST_ID", axis=1)
     return (df)
 
+@st.cache_data
+def perform_pca(df, n_components=8):
+    pca = PCA(n_components=n_components)
+    principal_components = pca.fit_transform(df)
+    pca_df = pd.DataFrame(data=principal_components, columns=[f"pca{i+1}" for i in range(n_components)])
+    return pca_df
+
+@st.cache_data
+def perform_clustering(method, df, n_clusters):
+    if method == 'KMeans':
+        model = KMeans(n_clusters=n_clusters, random_state=0)
+    elif method == 'Gaussian Mixture':
+        model = GaussianMixture(n_components=n_clusters, random_state=0)
+    else:  # Agglomerative Nesting
+        model = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
+    cluster_labels = model.fit_predict(df)
+    return model, cluster_labels
+
 def score_elbow(df, pca_df):
     '''
     pca = PCA(n_components=8)
@@ -54,36 +72,17 @@ def score_elbow(df, pca_df):
     st.pyplot(visualizer.fig)
     return kmeans
 
-@st.cache_data
-def scatter_plot(pca_df, cluster_labels, title):
-    """
-    Create a scatter plot for clustering results.
-    Parameters:
-    - pca_df: DataFrame containing PCA components
-    - cluster_labels: Cluster labels for each point
-    - title: Title for the plot
-    """
-    # Concatenate PCA DataFrame with cluster labels
-    pca_df_clustered = pd.concat([pca_df, pd.DataFrame({'cluster': cluster_labels})], axis=1)
-
-    # Create a figure and axis object
+def plot_scatter(pca_df, cluster_labels, title):
     fig, ax = plt.subplots(figsize=(8, 8))
-
-    # Define a dynamic palette
     n_clusters = len(np.unique(cluster_labels))
     palette = sns.color_palette("hsv", n_clusters)
-
-    # Create the scatter plot
+    pca_df_clustered = pd.concat([pca_df, pd.DataFrame({'cluster': cluster_labels})], axis=1)
     sns.scatterplot(x="pca1", y="pca2", hue="cluster", data=pca_df_clustered, palette=palette, ax=ax)
-
-    # Set plot title
     ax.set_title(title)
-
-    # Display the plot in Streamlit
     st.pyplot(fig)
 
 @st.cache_data
-def silhouette_plot(X, cluster_labels, title):
+def plot_silhouette(X, cluster_labels, title):
     """
     Create a silhouette plot for any clustering method.
     Parameters:
@@ -116,54 +115,32 @@ def silhouette_plot(X, cluster_labels, title):
 
     st.pyplot(fig)
 
-def elbow_plot(df, pca_df, gmm):
-    pass
-
 def cluster_analysis_options(df):
     """Options for cluster analysis in the sidebar."""
     st.sidebar.subheader("Cluster Analysis Options")
+    pca_df = perform_pca(df)
     cluster_method = st.sidebar.selectbox('Select Cluster Method',
                                           ('Kmeans', 'Gaussian Mixture', 'Agglomerative Nesting'),
                                           key='cluster_method')
-    # PCA transformation
-    pca = PCA(n_components=8)
-    principal_comp = pca.fit_transform(df)
-    pca_df = pd.DataFrame(data=principal_comp, columns=["pca1", "pca2", "pca3", "pca4", "pca5", "pca6", "pca7", "pca8"])
 
     n_clusters = st.sidebar.slider('Number of Clusters', min_value=2, max_value=10, value=4, key='n_clusters')
 
     st.subheader("Cluster Analysis")
-    st.write(f"Selected Method: {cluster_method}")
-    st.write(f"Number of Clusters: {n_clusters}")
+    st.write(f"Selected Method: {cluster_method}, Number of Clusters: {n_clusters}")
 
-    # Initialize cluster labels
-    cluster_labels = None
+    model, cluster_labels = perform_clustering(cluster_method, df, n_clusters)
 
-    # Clustering analysis based on the selected method
     if cluster_method == 'Kmeans':
-        kmeans = KMeans(n_clusters=n_clusters, random_state=0)
-        cluster_labels = kmeans.fit_predict(df)
-
         with st.expander("Distortion Score Elbow for KMeans Clustering"):
             score_elbow(df, pca_df)
 
-    elif cluster_method == 'Gaussian Mixture':
-        gmm = GaussianMixture(n_components=n_clusters, random_state=0)
-        cluster_labels = gmm.fit_predict(df)
-
-    elif cluster_method == 'Agglomerative Nesting':
-        agglomerative = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
-        cluster_labels = agglomerative.fit_predict(df)
-
-    # Scatter Plot for all methods
+    # Visualization Expander for Scatter Plot
     with st.expander("Scatter Plot"):
-        title = f"Clustering using {cluster_method} Algorithm"
-        scatter_plot(pca_df, cluster_labels, title)
+        plot_scatter(pca_df, cluster_labels, f"Clustering with {cluster_method}")
 
-    # Silhouette Plot for all methods
+    # Visualization Expander for Silhouette Plot
     with st.expander("Silhouette Plot"):
-        title = f"Silhouette Plot for {cluster_method} Clustering"
-        silhouette_plot(df, cluster_labels, title)  # Assuming df is the correct input here; adjust as necessary
+        plot_silhouette(df, cluster_labels, f"Silhouette Plot for {cluster_method}")
 
 def exploratory_data_analysis(df, insights_df, df_scaled):
     """Display the Exploratory Data Analysis Section."""
@@ -481,48 +458,48 @@ def upload_and_predict(cluster_method, data=None):
 def get_cluster_info():
     # Cluster descriptions, tooltips, and details
     cluster_descriptions = {
-        0: "Cluster 0: Moderate Use, Balanced Borrowers",
-        1: "Cluster 1: Active Spenders & Loyalists",
-        2: "Cluster 2: Cautious Participants",
-        3: "Cluster 3: High-Spending Active Users - Installment Savers"
+        0: "Moderate Use, Newer Customers",
+        1: "High Balance, Credit-Focused Users",
+        2: "Cash Advance Users with Longer Tenure",
+        3: "High-Spending Active Users"
     }
 
     # Extended descriptions for each cluster
     cluster_details = {
         0: """
                <ul>
-                   <li>Purchase Behavior: Moderate engagement in installment purchases with a moderate frequency of one-off purchases.</li>
-                   <li>Credit Limit: Higher credit limits compared to other clusters.</li>
-                   <li>Cash Advances: Moderate to high usage frequency, indicating reliance on cash advances.</li>
-                   <li>Payment Habits: Less frequent transactions but with higher payment amounts.</li>
-                   <li>Tenure: Long-standing customer relationships with a mean tenure around 11 years.</li>
+                   <li>Purchase Behavior: Less frequent purchases, both one-off and installment types are low.</li>
+                   <li>Credit Limit: Moderate credit limits.</li>
+                   <li>Cash Advances: Limited use of cash advances.</li>
+                   <li>Payment Habits: Payments are close to the minimum required, seldom pay the full balance.</li>
+                   <li>Tenure: Relatively new to the credit card service.</li>
                </ul>
                """,
         1: """
                <ul>
-                   <li>High frequency of both one-off and installment purchases, indicating active spending.</li>
-                   <li>High credit limits, similar to Cluster 0.</li>
-                   <li>Cash Advances: Infrequent usage, suggesting a lower reliance on cash advances.</li>
-                   <li>Payment Habits: Active in making payments, potentially indicating good financial management.</li>
-                   <li>Tenure: Very loyal customers with the longest average tenure, slightly above 11 years.</li>
+                   <li>Purchase Behavior: Moderate engagement in both one-off and installment purchases.</li>
+                   <li>Credit Limit: High credit limits.</li>
+                   <li>Cash Advances: More frequent use of cash advances compared to Cluster 0.</li>
+                   <li>Payment Habits: High minimum payments, low percentage of full payments, indicating carrying over balances.</li>
+                   <li>Tenure: Similar to Cluster 0, relatively new to the credit card service.</li>
                </ul>
                """,
         2: """
                <ul>
-                   <li>Purchase Behavior: Lowest engagement in both one-off and installment purchases.</li>
-                   <li>Credit Limit: Lowest credit limits among all clusters.</li>
-                   <li>Cash Advances: Low frequency of usage, indicating cash advances are rarely used.</li>
-                   <li>Payment Habits: Minimal activity, possibly due to lower credit limits.</li>
-                   <li>Tenure: Long tenure, around 11 years, despite lower financial activity.</li>
+                   <li>Purchase Behavior: Lower frequency of purchases, preference for one-off transactions over installments.</li>
+                   <li>Credit Limit: Moderate credit limits.</li>
+                   <li>Cash Advances: Tendency to take cash advances.</li>
+                   <li>Payment Habits: Low frequency of payments, rarely pay the full bill.</li>
+                   <li>Tenure: Longer tenure with the credit card issuer.</li>
                </ul>
                """,
         3: """
                <ul>
-                   <li>Purchase Behavior: Prefer installment purchases significantly over one-off purchases.</li>
-                   <li>Credit Limit: Moderate credit limits, not as high as Clusters 0 and 1.</li>
-                   <li>Cash Advances: Very low frequency of usage, the least reliant on cash advances.</li>
-                   <li>Payment Habits: Payment frequency is not the highest but shows consistent behavior.</li>
-                   <li>Tenure: Loyalty is apparent with long tenure, averaging around 11.5 years.</li>
+                   <li>Purchase Behavior: Significant and frequent purchases, active in both one-off and installment types.</li>
+                   <li>Credit Limit: High credit limits.</li>
+                   <li>Cash Advances: Not defined by cash advance behavior.</li>
+                   <li>Payment Habits: Substantial payments toward their balances, although not always paying in full.</li>
+                   <li>Tenure: Long-term, engaged customers with the credit card service.</li>
                </ul>
                """
     }
