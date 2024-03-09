@@ -36,24 +36,6 @@ def process_data(df):
     df = df.drop("CUST_ID", axis=1)
     return (df)
 
-@st.cache_data
-def perform_pca(df, n_components=8):
-    pca = PCA(n_components=n_components)
-    principal_components = pca.fit_transform(df)
-    pca_df = pd.DataFrame(data=principal_components, columns=[f"pca{i+1}" for i in range(n_components)])
-    return pca_df
-
-@st.cache_data
-def perform_clustering(method, df, n_clusters):
-    if method == 'KMeans':
-        model = KMeans(n_clusters=n_clusters, random_state=0)
-    elif method == 'Gaussian Mixture':
-        model = GaussianMixture(n_components=n_clusters, random_state=0)
-    else:  # Agglomerative Nesting
-        model = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
-    cluster_labels = model.fit_predict(df)
-    return model, cluster_labels
-
 def score_elbow(df, pca_df):
     '''
     pca = PCA(n_components=8)
@@ -72,17 +54,36 @@ def score_elbow(df, pca_df):
     st.pyplot(visualizer.fig)
     return kmeans
 
-def plot_scatter(pca_df, cluster_labels, title):
+@st.cache_data
+def scatter_plot(pca_df, cluster_labels, title):
+    """
+    Create a scatter plot for clustering results.
+    Parameters:
+    - pca_df: DataFrame containing PCA components
+    - cluster_labels: Cluster labels for each point
+    - title: Title for the plot
+    """
+    # Concatenate PCA DataFrame with cluster labels
+    pca_df_clustered = pd.concat([pca_df, pd.DataFrame({'cluster': cluster_labels})], axis=1)
+
+    # Create a figure and axis object
     fig, ax = plt.subplots(figsize=(8, 8))
+
+    # Define a dynamic palette
     n_clusters = len(np.unique(cluster_labels))
     palette = sns.color_palette("hsv", n_clusters)
-    pca_df_clustered = pd.concat([pca_df, pd.DataFrame({'cluster': cluster_labels})], axis=1)
+
+    # Create the scatter plot
     sns.scatterplot(x="pca1", y="pca2", hue="cluster", data=pca_df_clustered, palette=palette, ax=ax)
+
+    # Set plot title
     ax.set_title(title)
+
+    # Display the plot in Streamlit
     st.pyplot(fig)
 
 @st.cache_data
-def plot_silhouette(X, cluster_labels, title):
+def silhouette_plot(X, cluster_labels, title):
     """
     Create a silhouette plot for any clustering method.
     Parameters:
@@ -118,29 +119,48 @@ def plot_silhouette(X, cluster_labels, title):
 def cluster_analysis_options(df):
     """Options for cluster analysis in the sidebar."""
     st.sidebar.subheader("Cluster Analysis Options")
-    pca_df = perform_pca(df)
     cluster_method = st.sidebar.selectbox('Select Cluster Method',
                                           ('Kmeans', 'Gaussian Mixture', 'Agglomerative Nesting'),
                                           key='cluster_method')
+    # PCA transformation
+    pca = PCA(n_components=8)
+    principal_comp = pca.fit_transform(df)
+    pca_df = pd.DataFrame(data=principal_comp, columns=["pca1", "pca2", "pca3", "pca4", "pca5", "pca6", "pca7", "pca8"])
 
     n_clusters = st.sidebar.slider('Number of Clusters', min_value=2, max_value=10, value=4, key='n_clusters')
 
     st.subheader("Cluster Analysis")
-    st.write(f"Selected Method: {cluster_method}, Number of Clusters: {n_clusters}")
+    st.write(f"Selected Method: {cluster_method}")
+    st.write(f"Number of Clusters: {n_clusters}")
 
-    model, cluster_labels = perform_clustering(cluster_method, df, n_clusters)
+    # Initialize cluster labels
+    cluster_labels = None
 
+    # Clustering analysis based on the selected method
     if cluster_method == 'Kmeans':
+        kmeans = KMeans(n_clusters=n_clusters, random_state=0)
+        cluster_labels = kmeans.fit_predict(df)
+
         with st.expander("Distortion Score Elbow for KMeans Clustering"):
             score_elbow(df, pca_df)
 
-    # Visualization Expander for Scatter Plot
-    with st.expander("Scatter Plot"):
-        plot_scatter(pca_df, cluster_labels, f"Clustering with {cluster_method}")
+    elif cluster_method == 'Gaussian Mixture':
+        gmm = GaussianMixture(n_components=n_clusters, random_state=0)
+        cluster_labels = gmm.fit_predict(df)
 
-    # Visualization Expander for Silhouette Plot
+    elif cluster_method == 'Agglomerative Nesting':
+        agglomerative = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
+        cluster_labels = agglomerative.fit_predict(df)
+
+    # Scatter Plot for all methods
+    with st.expander("Scatter Plot"):
+        title = f"Clustering using {cluster_method} Algorithm"
+        scatter_plot(pca_df, cluster_labels, title)
+
+    # Silhouette Plot for all methods
     with st.expander("Silhouette Plot"):
-        plot_silhouette(df, cluster_labels, f"Silhouette Plot for {cluster_method}")
+        title = f"Silhouette Plot for {cluster_method} Clustering"
+        silhouette_plot(df, cluster_labels, title)  # Assuming df is the correct input here; adjust as necessary
 
 def exploratory_data_analysis(df, insights_df, df_scaled):
     """Display the Exploratory Data Analysis Section."""
